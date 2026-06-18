@@ -85,23 +85,25 @@ check_install lua lua
 check_install openssl openssl-util
 check_install bash bash
 check_install sort coreutils-sort
-check_install wget wget
 
-# 4. Скачивание и валидация ядра Sing-Box (Прямое скачивание бинарника)
+# 4. Скачивание и валидация ядра Sing-Box
 echo -e "\n${YELLOW}[4/6] Downloading & Testing Sing-Box Core...${RESET}"
 echo "  Downloading binary from custom repository..."
-if wget -qO sing-box "$SB_DOWNLOAD_URL"; then
+# ИСПОЛЬЗУЕМ CURL ВМЕСТО WGET ДЛЯ ОБХОДА РЕДИРЕКТОВ S3 И SSL ОШИБОК
+if curl -k -sL -o sing-box "$SB_DOWNLOAD_URL"; then
     chmod +x sing-box
     
     echo "  Testing core architecture compatibility..."
     if ! ./sing-box version >/dev/null 2>&1; then
         echo -e "${RED}ERROR: Binary execution failed!${RESET}"
         echo "  The downloaded core is incompatible with your router's CPU architecture."
+        echo "  Make sure the binary file is valid and built for MIPSLE."
         rollback
     fi
     echo -e "  ${GREEN}[OK] Sing-Box core passed execution test.${RESET}"
 else
     echo -e "${RED}ERROR: Failed to download Sing-Box core!${RESET}"
+    echo "  Check if the URL is correct and the file exists in your GitHub Releases."
     rollback
 fi
 
@@ -112,7 +114,7 @@ download_file() {
     local folder=$1
     local filename=$2
     echo -n "  Downloading $filename... "
-    if wget -q -O "$WORKDIR/$filename" "$REPO_URL/$folder/$filename"; then
+    if curl -k -sL -o "$WORKDIR/$filename" "$REPO_URL/$folder/$filename"; then
         echo -e "${GREEN}Done.${RESET}"
     else
         echo -e "${RED}Failed!${RESET}"
