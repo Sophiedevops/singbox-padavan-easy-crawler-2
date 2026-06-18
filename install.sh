@@ -23,7 +23,6 @@ echo -e "${CYAN}================================================================
 echo -e "${CYAN}  Sing-Box Padavan Smart Crawler (v2.0) - Auto Installer        ${RESET}"
 echo -e "${CYAN}================================================================${RESET}"
 
-# Функция отката при критической ошибке
 rollback() {
     echo -e "\n${RED}CRITICAL ERROR: Installation failed! Performing rollback...${RESET}"
     if [ -d "$WORKDIR" ] && [ "$BACKUP_PERFORMED" != "1" ]; then
@@ -38,12 +37,11 @@ rollback() {
 echo -e "\n${YELLOW}[1/6] Checking Entware environment...${RESET}"
 if [ ! -d "/opt/bin" ] || [ ! -d "/opt/etc" ]; then
     echo -e "${RED}ERROR: Entware (/opt) is not installed or not mounted!${RESET}"
-    echo "Please install Entware to a USB drive first."
     exit 1
 fi
 echo -e "  ${GREEN}[OK] Entware detected.${RESET}"
 
-# 2. Авто-Бэкап существующей директории
+# 2. Авто-Бэкап
 echo -e "\n${YELLOW}[2/6] Checking directory status...${RESET}"
 BACKUP_PERFORMED=0
 if [ -d "$WORKDIR" ]; then
@@ -60,28 +58,39 @@ fi
 mkdir -p "$WORKDIR" || rollback
 cd "$WORKDIR" || rollback
 
-# 3. Установка и проверка зависимостей (с retry-логикой)
-echo -e "\n${YELLOW}[3/6] Installing required packages...${RESET}"
-# Принудительно ставим gawk вместо обрезанного awk
-REQUIRED_PKGS="curl jq lua openssl-util bash coreutils-sort wget gawk tar gzip"
+# 3. Умная установка зависимостей (Проверяем наличие команд, а не пакетов)
+echo -e "\n${YELLOW}[3/6] Checking and installing missing utilities...${RESET}"
 
-for pkg in $REQUIRED_PKGS; do
-    if ! opkg list-installed 2>/dev/null | grep -q "^$pkg "; then
-        echo -n "  Installing $pkg... "
+check_install() {
+    local cmd=$1
+    local pkg=$2
+    if ! which "$cmd" >/dev/null 2>&1; then
+        echo -n "  Command '$cmd' not found. Installing '$pkg'... "
         if ! opkg install "$pkg" >/dev/null 2>&1; then
-            # Если первая попытка упала, обновляем репозитории и пробуем снова
             opkg update >/dev/null 2>&1
             if ! opkg install "$pkg" >/dev/null 2>&1; then
                 echo -e "${RED}Failed!${RESET}"
-                echo -e "  Cannot install dependency: $pkg. Check your internet connection or Entware repos."
+                echo "  Cannot install dependency: $pkg."
                 rollback
             fi
         fi
         echo -e "${GREEN}Done.${RESET}"
     else
-        echo -e "  $pkg is already installed. ${GREEN}[SKIP]${RESET}"
+        echo -e "  $cmd is already available. ${GREEN}[SKIP]${RESET}"
     fi
-done
+}
+
+check_install curl curl
+check_install jq jq
+check_install lua lua
+check_install openssl openssl-util
+check_install bash bash
+check_install sort coreutils-sort
+check_install wget wget
+check_install tar tar
+check_install gzip gzip
+# awk проверяется, но так как он встроен в Padavan, установка gawk не потребуется
+check_install awk gawk
 
 # 4. Скачивание и валидация ядра Sing-Box
 echo -e "\n${YELLOW}[4/6] Downloading & Testing Sing-Box Core (v$SB_VERSION)...${RESET}"
@@ -93,15 +102,13 @@ if wget -qO sb.tar.gz "$SB_DOWNLOAD_URL"; then
     rm -rf "sing-box-${SB_VERSION}-${SB_ARCH}" sb.tar.gz
     chmod +x sing-box
     
-    # ТЕСТИРОВАНИЕ СОВМЕСТИМОСТИ (Sanity Check)
     echo "  Testing core architecture compatibility..."
     if ! ./sing-box version >/dev/null 2>&1; then
         echo -e "${RED}ERROR: Binary execution failed!${RESET}"
         echo "  The downloaded core is incompatible with your router's CPU architecture."
-        echo "  This script expects MIPSLE (mipsel) architecture."
         rollback
     fi
-    echo -e "  ${GREEN}[OK] Sing-Box core installed and successfully passed execution test.${RESET}"
+    echo -e "  ${GREEN}[OK] Sing-Box core passed execution test.${RESET}"
 else
     echo -e "${RED}ERROR: Failed to download Sing-Box core!${RESET}"
     rollback
@@ -122,26 +129,39 @@ download_file() {
     fi
 }
 
-# Загрузка
 download_file "scripts" "update.sh"
 download_file "scripts" "gen_links.sh"
 download_file "scripts" "converter.lua"
 download_file "scripts" "utils.lua"
 download_file "templates" "conf3_final.json"
 
-# Права
 chmod +x "$WORKDIR/update.sh"
 chmod +x "$WORKDIR/gen_links.sh"
 
-# 6. Финальная инициализация
-echo -e "\n${YELLOW}[6/6] Finalizing setup...${RESET}"
-# Заменяем обращения к системному awk на свежеустановленный gawk (если скрипт update.sh использует awk)
-sed -i 's/ awk / gawk /g' "$WORKDIR/update.sh" 2>/dev/null
+# 6. Уникальная криптография (Генерация ключей и паролей)
+echo -e "\n${YELLOW}[6/6] Generating unique security credentials...${RESET}"
 
-if [ ! -f "$WORKDIR/conf2_final.json" ]; then
-    cp "$WORKDIR/conf3_final.json" "$WORKDIR/conf2_final.json"
-fi
-echo -e "  ${GREEN}[OK] Configuration templates initialized.${RESET}"
+CERT_DIR="$WORKDIR/certs/grpc"
+mkdir -p "$CERT_DIR"
+
+echo -n "  Generating self-signed TLS certificates for Hysteria2... "
+openssl ecparam -genkey -name prime256v1 -out "$CERT_DIR/h2.pem" 2>/dev/null
+openssl req -new -x509 -days 36500 -key "$CERT_DIR/h2.pem" -out "$CERT_DIR/h2.cert" -subj "/CN=cloudflare.com" 2>/dev/null
+echo -e "${GREEN}Done.${RESET}"
+
+echo -n "  Injecting random passwords into configuration... "
+# Генерируем безопасные случайные пароли (HEX, чтобы избежать спецсимволов, ломающих JSON)
+SS_PASS=$(openssl rand -hex 12)
+HY2_PASS=$(openssl rand -hex 10)
+
+# Внедряем пароли в эталонный конфиг через jq
+jq --arg sspass "$SS_PASS" --arg hy2pass "$HY2_PASS" '
+    (.inbounds[]? | select(.tag == "ss-in") | .password) = $sspass |
+    (.inbounds[]? | select(.tag == "hy2-in") | .users[0].password) = $hy2pass
+' "$WORKDIR/conf3_final.json" > "$WORKDIR/tmp.json" && mv "$WORKDIR/tmp.json" "$WORKDIR/conf3_final.json"
+
+cp "$WORKDIR/conf3_final.json" "$WORKDIR/conf2_final.json"
+echo -e "${GREEN}Done.${RESET}"
 
 # --- УСПЕХ ---
 echo -e "\n${CYAN}================================================================${RESET}"
