@@ -8,9 +8,8 @@
 # --- Настройки ---
 REPO_URL="https://raw.githubusercontent.com/Sophiedevops/singbox-padavan-easy-crawler-2/main"
 WORKDIR="/opt/tmp_sb_ext/sing-box-1.12.12-extended-1.5.1-linux-mipsle"
-SB_VERSION="1.12.12"
-SB_ARCH="linux-mipsle-softfloat"
-SB_DOWNLOAD_URL="https://github.com/SagerNet/sing-box/releases/download/v${SB_VERSION}/sing-box-${SB_VERSION}-${SB_ARCH}.tar.gz"
+# Прямая ссылка на бинарный файл из вашего репозитория
+SB_DOWNLOAD_URL="https://github.com/Sophiedevops/singbox-padavan-easy-crawler-2/releases/download/Binary/sing-box"
 
 # --- Цвета ---
 GREEN='\033[1;32m'
@@ -58,7 +57,7 @@ fi
 mkdir -p "$WORKDIR" || rollback
 cd "$WORKDIR" || rollback
 
-# 3. Умная установка зависимостей (Проверяем наличие команд, а не пакетов)
+# 3. Умная установка зависимостей
 echo -e "\n${YELLOW}[3/6] Checking and installing missing utilities...${RESET}"
 
 check_install() {
@@ -87,19 +86,11 @@ check_install openssl openssl-util
 check_install bash bash
 check_install sort coreutils-sort
 check_install wget wget
-check_install tar tar
-check_install gzip gzip
-# awk проверяется, но так как он встроен в Padavan, установка gawk не потребуется
-check_install awk gawk
 
-# 4. Скачивание и валидация ядра Sing-Box
-echo -e "\n${YELLOW}[4/6] Downloading & Testing Sing-Box Core (v$SB_VERSION)...${RESET}"
-echo "  Downloading from GitHub Releases..."
-if wget -qO sb.tar.gz "$SB_DOWNLOAD_URL"; then
-    echo "  Extracting archive..."
-    tar -xzf sb.tar.gz || rollback
-    mv "sing-box-${SB_VERSION}-${SB_ARCH}/sing-box" . || rollback
-    rm -rf "sing-box-${SB_VERSION}-${SB_ARCH}" sb.tar.gz
+# 4. Скачивание и валидация ядра Sing-Box (Прямое скачивание бинарника)
+echo -e "\n${YELLOW}[4/6] Downloading & Testing Sing-Box Core...${RESET}"
+echo "  Downloading binary from custom repository..."
+if wget -qO sing-box "$SB_DOWNLOAD_URL"; then
     chmod +x sing-box
     
     echo "  Testing core architecture compatibility..."
@@ -150,11 +141,9 @@ openssl req -new -x509 -days 36500 -key "$CERT_DIR/h2.pem" -out "$CERT_DIR/h2.ce
 echo -e "${GREEN}Done.${RESET}"
 
 echo -n "  Injecting random passwords into configuration... "
-# Генерируем безопасные случайные пароли (HEX, чтобы избежать спецсимволов, ломающих JSON)
 SS_PASS=$(openssl rand -hex 12)
 HY2_PASS=$(openssl rand -hex 10)
 
-# Внедряем пароли в эталонный конфиг через jq
 jq --arg sspass "$SS_PASS" --arg hy2pass "$HY2_PASS" '
     (.inbounds[]? | select(.tag == "ss-in") | .password) = $sspass |
     (.inbounds[]? | select(.tag == "hy2-in") | .users[0].password) = $hy2pass
