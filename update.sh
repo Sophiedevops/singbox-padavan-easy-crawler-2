@@ -36,13 +36,10 @@ SUBS_LIST="
 https://raw.githubusercontent.com/sakha1370/OpenRay/refs/heads/main/output/all_valid_proxies.txt
 https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/all_extracted_configs.txt
 https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt
-https://raw.githubusercontent.com/acymz/AutoVPN/refs/heads/main/data/V2.txt
-https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/V2RAY.txt
 https://raw.githubusercontent.com/amirkma/proxykma/refs/heads/main/mix.txt
 https://raw.githubusercontent.com/mahdibland/V2RayAggregator/refs/heads/master/sub/sub_merge.txt
 https://raw.githubusercontent.com/gongchandang49/TelegramV2rayCollector/refs/heads/main/sub/mix
 https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/refs/heads/main/Protocols/ss.txt
-https://raw.githubusercontent.com/LonUp/NodeList/main/node.txt
 "
 
 # === ЦВЕТА ===
