@@ -165,7 +165,7 @@ prepare_temp && check_provider || exit 1
 
 for URL in $SUBS_LIST; do
     FNAME=$(basename "$URL")
-    if wget --no-check-certificate -q -O "$TEMP/part.tmp" "$URL"; then
+    if curl -k -sL -o "$TEMP/part.tmp" "$URL"; then
         tr -d '\000\r' < "$TEMP/part.tmp" > "$TEMP/part.txt"
         if ! grep -qE "^(ss|vmess|vless|trojan|hysteria2)://" "$TEMP/part.txt" 2>/dev/null; then
             base64 -d "$TEMP/part.txt" > "$TEMP/part_dec.txt" 2>/dev/null
