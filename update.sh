@@ -2,8 +2,8 @@
 
 # === НАСТРОЙКИ ===
 WANTED=10
-PERFECT_SPEED_KBPS=800
-MIN_FAST_CHECK_SPEED_KBPS=500  # Нижнее окно скорости для быстрой проверки
+PERFECT_SPEED_KBPS=900
+MIN_FAST_CHECK_SPEED_KBPS=600  # Нижнее окно скорости для быстрой проверки
 TEST_PORT=25555
 TEST_API_PORT=9092
 TEST_URLS="https://speed.cloudflare.com/__down?bytes=10485760 https://cachefly.cachefly.net/10mb.test"
