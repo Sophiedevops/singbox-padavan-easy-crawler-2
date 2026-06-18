@@ -114,7 +114,7 @@ download_file() {
     local folder=$1
     local filename=$2
     echo -n "  Downloading $filename... "
-    if curl -k -sL -o "$WORKDIR/$filename" "$REPO_URL/$folder/$filename"; then
+    if curl -k -sL -o sing-box "$SB_DOWNLOAD_URL"; then
         echo -e "${GREEN}Done.${RESET}"
     else
         echo -e "${RED}Failed!${RESET}"
