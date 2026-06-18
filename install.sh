@@ -8,7 +8,6 @@
 # --- Настройки ---
 REPO_URL="https://raw.githubusercontent.com/Sophiedevops/singbox-padavan-easy-crawler-2/main"
 WORKDIR="/opt/tmp_sb_ext/sing-box-1.12.12-extended-1.5.1-linux-mipsle"
-# Прямая ссылка на бинарный файл из вашего репозитория
 SB_DOWNLOAD_URL="https://github.com/Sophiedevops/singbox-padavan-easy-crawler-2/releases/download/Binary/sing-box"
 
 # --- Цвета ---
@@ -33,7 +32,7 @@ rollback() {
 }
 
 # 1. Проверка среды Entware
-echo -e "\n${YELLOW}[1/6] Checking Entware environment...${RESET}"
+echo -e "\n${YELLOW}[1/7] Checking Entware environment...${RESET}"
 if [ ! -d "/opt/bin" ] || [ ! -d "/opt/etc" ]; then
     echo -e "${RED}ERROR: Entware (/opt) is not installed or not mounted!${RESET}"
     exit 1
@@ -41,7 +40,7 @@ fi
 echo -e "  ${GREEN}[OK] Entware detected.${RESET}"
 
 # 2. Авто-Бэкап
-echo -e "\n${YELLOW}[2/6] Checking directory status...${RESET}"
+echo -e "\n${YELLOW}[2/7] Checking directory status...${RESET}"
 BACKUP_PERFORMED=0
 if [ -d "$WORKDIR" ]; then
     BACKUP_DIR="${WORKDIR}_backup_$(date +%Y%m%d_%H%M%S)"
@@ -57,8 +56,8 @@ fi
 mkdir -p "$WORKDIR" || rollback
 cd "$WORKDIR" || rollback
 
-# 3. Умная установка зависимостей
-echo -e "\n${YELLOW}[3/6] Checking and installing missing utilities...${RESET}"
+# 3. Установка зависимостей
+echo -e "\n${YELLOW}[3/7] Checking and installing missing utilities...${RESET}"
 
 check_install() {
     local cmd=$1
@@ -69,7 +68,6 @@ check_install() {
             opkg update >/dev/null 2>&1
             if ! opkg install "$pkg" >/dev/null 2>&1; then
                 echo -e "${RED}Failed!${RESET}"
-                echo "  Cannot install dependency: $pkg."
                 rollback
             fi
         fi
@@ -86,35 +84,29 @@ check_install openssl openssl-util
 check_install bash bash
 check_install sort coreutils-sort
 
-# 4. Скачивание и валидация ядра Sing-Box
-echo -e "\n${YELLOW}[4/6] Downloading & Testing Sing-Box Core...${RESET}"
+# 4. Скачивание ядра Sing-Box
+echo -e "\n${YELLOW}[4/7] Downloading & Testing Sing-Box Core...${RESET}"
 echo "  Downloading binary from custom repository..."
-# ИСПОЛЬЗУЕМ CURL ВМЕСТО WGET ДЛЯ ОБХОДА РЕДИРЕКТОВ S3 И SSL ОШИБОК
-if curl -k -sL -o sing-box "$SB_DOWNLOAD_URL"; then
+if curl -k -fL -s -o sing-box "$SB_DOWNLOAD_URL"; then
     chmod +x sing-box
-    
-    echo "  Testing core architecture compatibility..."
     if ! ./sing-box version >/dev/null 2>&1; then
         echo -e "${RED}ERROR: Binary execution failed!${RESET}"
-        echo "  The downloaded core is incompatible with your router's CPU architecture."
-        echo "  Make sure the binary file is valid and built for MIPSLE."
         rollback
     fi
     echo -e "  ${GREEN}[OK] Sing-Box core passed execution test.${RESET}"
 else
     echo -e "${RED}ERROR: Failed to download Sing-Box core!${RESET}"
-    echo "  Check if the URL is correct and the file exists in your GitHub Releases."
     rollback
 fi
 
-# 5. Загрузка скриптов и шаблонов конфигурации
-echo -e "\n${YELLOW}[5/6] Downloading Crawler Scripts & Templates...${RESET}"
+# 5. Загрузка скриптов из КОРНЯ репозитория
+echo -e "\n${YELLOW}[5/7] Downloading Crawler Scripts & Templates...${RESET}"
 
 download_file() {
-    local folder=$1
-    local filename=$2
+    local filename=$1
     echo -n "  Downloading $filename... "
-    if curl -k -sL -o sing-box "$SB_DOWNLOAD_URL"; then
+    # Загружаем файлы напрямую из корня репозитория (без папок)
+    if curl -k -fL -s -o "$WORKDIR/$filename" "$REPO_URL/$filename"; then
         echo -e "${GREEN}Done.${RESET}"
     else
         echo -e "${RED}Failed!${RESET}"
@@ -122,17 +114,17 @@ download_file() {
     fi
 }
 
-download_file "scripts" "update.sh"
-download_file "scripts" "gen_links.sh"
-download_file "scripts" "converter.lua"
-download_file "scripts" "utils.lua"
-download_file "templates" "conf3_final.json"
+download_file "update.sh"
+download_file "gen_links.sh"
+download_file "converter.lua"
+download_file "utils.lua"
+download_file "conf3_final.json"
 
 chmod +x "$WORKDIR/update.sh"
 chmod +x "$WORKDIR/gen_links.sh"
 
-# 6. Уникальная криптография (Генерация ключей и паролей)
-echo -e "\n${YELLOW}[6/6] Generating unique security credentials...${RESET}"
+# 6. Генерация ключей и паролей
+echo -e "\n${YELLOW}[6/7] Generating unique security credentials...${RESET}"
 
 CERT_DIR="$WORKDIR/certs/grpc"
 mkdir -p "$CERT_DIR"
@@ -154,13 +146,23 @@ jq --arg sspass "$SS_PASS" --arg hy2pass "$HY2_PASS" '
 cp "$WORKDIR/conf3_final.json" "$WORKDIR/conf2_final.json"
 echo -e "${GREEN}Done.${RESET}"
 
+# 7. Автоматический запуск парсера и генератора
+echo -e "\n${YELLOW}[7/7] Starting Initial Proxy Update & Link Generation...${RESET}"
+echo -e "  ${CYAN}This process will download and test proxies. It may take 2-5 minutes.${RESET}"
+echo -e "  ${CYAN}Please wait...${RESET}\n"
+
+# Запускаем обновление прокси
+./update.sh
+
+# Сразу после успешного обновления генерируем клиентские ссылки
+echo -e "\n${YELLOW}Generating Client Links...${RESET}"
+./gen_links.sh
+
 # --- УСПЕХ ---
 echo -e "\n${CYAN}================================================================${RESET}"
-echo -e "${GREEN}  Installation Successfully Completed! 🎉${RESET}"
+echo -e "${GREEN}  Installation & Setup Successfully Completed! 🎉${RESET}"
 echo -e "${CYAN}================================================================${RESET}"
-echo -e "Your fully operational working directory is: ${YELLOW}$WORKDIR${RESET}"
-echo -e "\nTo start finding and testing proxies, simply run:"
-echo -e "  ${YELLOW}cd $WORKDIR && ./update.sh${RESET}"
-echo -e "\nTo generate client connection links later, run:"
-echo -e "  ${YELLOW}cd $WORKDIR && ./gen_links.sh${RESET}"
+echo -e "Your working directory is: ${YELLOW}$WORKDIR${RESET}"
+echo -e "Your client connection links are saved in: ${GREEN}$WORKDIR/clients.txt${RESET}\n"
+cat "$WORKDIR/clients.txt"
 echo -e "\nStay secure! 🛡️"
