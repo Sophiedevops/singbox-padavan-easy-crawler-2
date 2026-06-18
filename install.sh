@@ -32,7 +32,7 @@ rollback() {
 }
 
 # 1. Проверка среды Entware
-echo -e "\n${YELLOW}[1/7] Checking Entware environment...${RESET}"
+echo -e "\n${YELLOW}[1/8] Checking Entware environment...${RESET}"
 if [ ! -d "/opt/bin" ] || [ ! -d "/opt/etc" ]; then
     echo -e "${RED}ERROR: Entware (/opt) is not installed or not mounted!${RESET}"
     exit 1
@@ -40,7 +40,7 @@ fi
 echo -e "  ${GREEN}[OK] Entware detected.${RESET}"
 
 # 2. Авто-Бэкап
-echo -e "\n${YELLOW}[2/7] Checking directory status...${RESET}"
+echo -e "\n${YELLOW}[2/8] Checking directory status...${RESET}"
 BACKUP_PERFORMED=0
 if [ -d "$WORKDIR" ]; then
     BACKUP_DIR="${WORKDIR}_backup_$(date +%Y%m%d_%H%M%S)"
@@ -57,7 +57,7 @@ mkdir -p "$WORKDIR" || rollback
 cd "$WORKDIR" || rollback
 
 # 3. Установка зависимостей
-echo -e "\n${YELLOW}[3/7] Checking and installing missing utilities...${RESET}"
+echo -e "\n${YELLOW}[3/8] Checking and installing missing utilities...${RESET}"
 
 check_install() {
     local cmd=$1
@@ -85,7 +85,7 @@ check_install bash bash
 check_install sort coreutils-sort
 
 # 4. Скачивание ядра Sing-Box
-echo -e "\n${YELLOW}[4/7] Downloading & Testing Sing-Box Core...${RESET}"
+echo -e "\n${YELLOW}[4/8] Downloading & Testing Sing-Box Core...${RESET}"
 echo "  Downloading binary from custom repository..."
 if curl -k -fL -s -o sing-box "$SB_DOWNLOAD_URL"; then
     chmod +x sing-box
@@ -99,13 +99,12 @@ else
     rollback
 fi
 
-# 5. Загрузка скриптов из КОРНЯ репозитория
-echo -e "\n${YELLOW}[5/7] Downloading Crawler Scripts & Templates...${RESET}"
+# 5. Загрузка скриптов
+echo -e "\n${YELLOW}[5/8] Downloading Crawler Scripts & Templates...${RESET}"
 
 download_file() {
     local filename=$1
     echo -n "  Downloading $filename... "
-    # Загружаем файлы напрямую из корня репозитория (без папок)
     if curl -k -fL -s -o "$WORKDIR/$filename" "$REPO_URL/$filename"; then
         echo -e "${GREEN}Done.${RESET}"
     else
@@ -124,7 +123,7 @@ chmod +x "$WORKDIR/update.sh"
 chmod +x "$WORKDIR/gen_links.sh"
 
 # 6. Генерация ключей и паролей
-echo -e "\n${YELLOW}[6/7] Generating unique security credentials...${RESET}"
+echo -e "\n${YELLOW}[6/8] Generating unique security credentials...${RESET}"
 
 CERT_DIR="$WORKDIR/certs/grpc"
 mkdir -p "$CERT_DIR"
@@ -146,15 +145,51 @@ jq --arg sspass "$SS_PASS" --arg hy2pass "$HY2_PASS" '
 cp "$WORKDIR/conf3_final.json" "$WORKDIR/conf2_final.json"
 echo -e "${GREEN}Done.${RESET}"
 
-# 7. Автоматический запуск парсера и генератора
-echo -e "\n${YELLOW}[7/7] Starting Initial Proxy Update & Link Generation...${RESET}"
+# 7. Настройка Автозапуска и Планировщика (Cron)
+echo -e "\n${YELLOW}[7/8] Setting up Autostart and Cron Schedule...${RESET}"
+
+STARTED_SCRIPT="/etc/storage/started_script.sh"
+CRON_FILE="/etc/storage/cron/crontabs/admin"
+RUN_CMD="nohup $WORKDIR/sing-box run -c $WORKDIR/conf2_final.json >/dev/null 2>&1 &"
+CRON_CMD="0 4 */3 * * $WORKDIR/update.sh >/dev/null 2>&1"
+
+# Автозапуск ядра при включении роутера
+if [ -f "$STARTED_SCRIPT" ]; then
+    if ! grep -q "$WORKDIR/sing-box" "$STARTED_SCRIPT"; then
+        echo -n "  Adding sing-box to router startup (started_script.sh)... "
+        echo "" >> "$STARTED_SCRIPT"
+        echo "# Auto-start Sing-Box" >> "$STARTED_SCRIPT"
+        echo "$RUN_CMD" >> "$STARTED_SCRIPT"
+        echo -e "${GREEN}Done.${RESET}"
+    else
+        echo -e "  Autostart already configured. ${GREEN}[SKIP]${RESET}"
+    fi
+fi
+
+# Периодическое обновление прокси (каждые 3 дня в 04:00)
+if [ -d "/etc/storage/cron/crontabs" ]; then
+    touch "$CRON_FILE"
+    if ! grep -q "$WORKDIR/update.sh" "$CRON_FILE"; then
+        echo -n "  Adding update.sh to Cron schedule... "
+        echo "$CRON_CMD" >> "$CRON_FILE"
+        killall crond 2>/dev/null
+        crond
+        echo -e "${GREEN}Done.${RESET}"
+    else
+        echo -e "  Cron schedule already configured. ${GREEN}[SKIP]${RESET}"
+    fi
+fi
+
+echo -n "  Saving settings to router flash (mtd_storage.sh)... "
+mtd_storage.sh save >/dev/null 2>&1
+echo -e "${GREEN}Done.${RESET}"
+
+# 8. Автоматический запуск парсера
+echo -e "\n${YELLOW}[8/8] Starting Initial Proxy Update & Link Generation...${RESET}"
 echo -e "  ${CYAN}This process will download and test proxies. It may take 2-5 minutes.${RESET}"
 echo -e "  ${CYAN}Please wait...${RESET}\n"
 
-# Запускаем обновление прокси
 ./update.sh
-
-# Сразу после успешного обновления генерируем клиентские ссылки
 echo -e "\n${YELLOW}Generating Client Links...${RESET}"
 ./gen_links.sh
 
