@@ -240,7 +240,7 @@ cd /opt/tmp_sb_ext/sing-box-1.12.12-extended-1.5.1-linux-mipsle
 # 3. Скачайте скрипты
 RAW="https://raw.githubusercontent.com/Sophiedevops/singbox-padavan-easy-crawler-2/main"
 wget -O update.sh      "$RAW/scripts/update.sh"
-wget -O gen_links2.sh  "$RAW/scripts/gen_links2.sh"
+wget -O gen_links2.sh  "$RAW/scripts/gen_links.sh"
 wget -O converter.lua  "$RAW/scripts/converter.lua"
 wget -O utils.lua      "$RAW/scripts/utils.lua"
 wget -O conf3_final.json "$RAW/templates/conf3_final.json"
@@ -345,7 +345,7 @@ singbox-padavan-easy-crawler-2/
 $WORKDIR/
 ├── sing-box           ← Бинарник ядра (из Releases)
 ├── update.sh          ← Основной скрипт
-├── gen_links2.sh      ← Генератор ссылок
+├── gen_links.sh      ← Генератор ссылок
 ├── converter.lua      ← Lua-парсер
 ├── utils.lua
 ├── conf3_final.json   ← Шаблон (не трогать вручную)
