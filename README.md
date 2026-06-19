@@ -25,7 +25,7 @@
 <div align="center">
 
 **Автоматический поиск, тест и ротация бесплатных прокси на слабом MIPS-роутере**
-
+**( протестировано на MiWiFi 3 | Xiaomi Mi-router 3 )** 
 > **Единственный скрипт**, который переварит базу из **60 000+ прокси-нод**  
 > на роутере с **32 МБ свободной ОЗУ** — без зависания, без OOM, без перегрева.
 
@@ -225,6 +225,7 @@ DONE! All links saved to clients.txt
 <div align="center">
 
 **Automated proxy search, testing and rotation for Sing-Box on low-end MIPS routers**
+**( tested on MiWiFi 3 | Xiaomi Mi-router 3 )**
 
 > The **only script** capable of processing **60,000+ proxy nodes**  
 > on a router with just **32 MB of free RAM** — no freezes, no OOM, no overheating.
@@ -608,6 +609,7 @@ PRIORITY_PROTOCOLS="shadowsocks hysteria2 vless trojan vmess"
 <div align="center">
 
 **在低配 MIPS 路由器上自动搜索、测试和轮换免费代理**
+**( 已在 MiWiFi 3 | Xiaomi Mi-router 3 上测试 )**
 
 > **唯一能在仅 32 MB 可用内存的路由器上**  
 > 处理 **60,000+ 代理节点** 数据库的脚本 — 不卡顿、不 OOM、不过热。
