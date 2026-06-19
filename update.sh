@@ -19,7 +19,7 @@ MAIN_PIDFILE="/var/run/sb_update_main.pid"
 # 1 - Стандартный (Все протоколы)
 # 2 - Параноидальный (Полное удаление "голых" VLESS без TLS и SS с методом none)
 # 3 - Гибридный (Все "голые" протоколы сдвигаются в самый низ очереди)
-ENCRYPTION_PRIORITY=2
+ENCRYPTION_PRIORITY=1
 
 # РЕЖИМ ПРИОРИТЕТА СОРТИРОВКИ
 # 0 - ПРОТОКОЛ -> СТРАНА (Сначала выжать Shadowsocks из ВСЕХ стран, затем VLESS и т.д.)
@@ -34,12 +34,12 @@ PRIORITY_PROTOCOLS="shadowsocks hysteria2 vless hysteria trojan vmess"
 # Подписки
 SUBS_LIST="
 https://raw.githubusercontent.com/sakha1370/OpenRay/refs/heads/main/output/all_valid_proxies.txt
+https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/refs/heads/main/Protocols/ss.txt
 https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/all_extracted_configs.txt
 https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt
 https://raw.githubusercontent.com/amirkma/proxykma/refs/heads/main/mix.txt
 https://raw.githubusercontent.com/mahdibland/V2RayAggregator/refs/heads/master/sub/sub_merge.txt
 https://raw.githubusercontent.com/gongchandang49/TelegramV2rayCollector/refs/heads/main/sub/mix
-https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/refs/heads/main/Protocols/ss.txt
 "
 
 # === ЦВЕТА ===
@@ -57,10 +57,14 @@ if [ "$CDIR" != "$WORKDIR" ]; then
     if [ -f "$CDIR/utils.lua" ]; then cp "$CDIR/utils.lua" "$WORKDIR/"; fi
 fi
 
+# === БЕЗОПАСНАЯ ОСТАНОВКА ПРОЦЕССОВ ===
 kill_testers() {
-    for p in $(ps | grep "[s]ing-box" | grep "run.json" | awk '{print $1}'); do
+    # Строго ищем процессы только в нашей временной папке (ps w для полного пути)
+    for p in $(ps w | grep "[s]ing-box" | grep "$TEMP/run.json" | awk '{print $1}'); do
         kill -9 $p 2>/dev/null
     done
+    
+    # Освобождаем только наши тестовые порты
     for p in $(netstat -tuln 2>/dev/null | grep -E ":$TEST_PORT |:$TEST_API_PORT " | awk '{print $7}' | cut -d/ -f1); do
         if echo "$p" | grep -q '^[0-9][0-9]*$'; then kill -9 $p 2>/dev/null; fi
     done
@@ -72,7 +76,9 @@ stop_main() {
         [ -n "$MPID" ] && kill -9 $MPID 2>/dev/null
         rm -f "$MAIN_PIDFILE"
     fi
-    for p in $(ps | grep "[s]ing-box" | grep "conf2_final.json" | awk '{print $1}'); do
+    
+    # Подстраховка: строго ищем конфиг только в нашей рабочей папке
+    for p in $(ps w | grep "[s]ing-box" | grep "$WORKDIR/conf2_final.json" | awk '{print $1}'); do
         kill -9 $p 2>/dev/null
     done
 }
@@ -126,7 +132,8 @@ if [ -f "$CONF_TARGET" ]; then
             
             VALID_FAST_NODES=$(curl -s http://127.0.0.1:$TEST_API_PORT/proxies | jq -r -f "$TEMP/api_all_valid.jq")
             STABLE_COUNT=0
-            STABLE_THRESHOLD=$((WANTED * 70 / 100))
+            # Математически правильное округление!
+            STABLE_THRESHOLD=$(( (WANTED * 70 + 50) / 100 ))
             echo -e "  ${PURPLE}Retention Threshold set to: $STABLE_THRESHOLD nodes (70% of WANTED)${RESET}"
             
             for NODE in $VALID_FAST_NODES; do
@@ -155,7 +162,7 @@ if [ -f "$CONF_TARGET" ]; then
     fi
 fi
 
-# === 2. СКАЧИВАНИЕ И АВТО-ДЕКОДИРОВАНИЕ БАЗЫ ===
+# === 2. СКАЧИВАНИЕ И АВТО-ДЕКОДИРОВАНИЕ БАЗЫ (CURL ONLY) ===
 echo -e "${CYAN}Starting Full Update & Base64 Decoding...${RESET}"
 prepare_temp && check_provider || exit 1
 > "$TEMP/all_subs.txt"
@@ -226,13 +233,12 @@ if [ ! -f "all_nodes.json" ] || [ ! -s "all_nodes.json" ]; then
 fi
 mv all_nodes.json "$TEMP/raw.json"
 
-# === 4. ГЛОБАЛЬНАЯ МАТРИЦА СОРТИРОВКИ (С УЧЕТОМ ОБЕИХ НАСТРОЕК) ===
+# === 4. ГЛОБАЛЬНАЯ МАТРИЦА СОРТИРОВКИ ===
 echo -e "${CYAN}Building Priority Matrix (EncMode: $ENCRYPTION_PRIORITY, SortMode: $SORT_PRIORITY)...${RESET}"
 echo "[]" > "$TEMP/all.json"
 jq 'map(select(.type == "shadowsocks"))' "$TEMP/raw.json" > "$TEMP/raw_ss.json"
 jq 'map(select(.type != "shadowsocks"))' "$TEMP/raw.json" > "$TEMP/raw_others.json"
 
-# --- Модульные функции для построения очереди ---
 add_chunk() {
     if [ $(safe_count "$TEMP/chunk.json") -gt 0 ]; then
         jq -s '.[0]+.[1]' "$TEMP/all.json" "$TEMP/chunk.json" > "$TEMP/t" && mv "$TEMP/t" "$TEMP/all.json"
@@ -275,7 +281,6 @@ add_naked_others() {
     add_chunk
 }
 
-# --- Сборка матрицы в зависимости от выбранной логики ---
 if [ "$SORT_PRIORITY" = "0" ]; then
     echo -e "  ${BLUE}➔ Logic: PROTOCOL -> COUNTRY${RESET}"
     
@@ -298,9 +303,7 @@ else
         echo -e "    ${CYAN}Processing Location: ${C^^}${RESET}"
         add_ss_secure "$C"
         
-        if [ "$ENCRYPTION_PRIORITY" = "1" ]; then
-            add_ss_open "$C"
-        fi
+        if [ "$ENCRYPTION_PRIORITY" = "1" ]; then add_ss_open "$C"; fi
         
         add_secure_others "$C"
         
