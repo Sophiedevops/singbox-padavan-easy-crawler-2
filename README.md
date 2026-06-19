@@ -182,16 +182,16 @@ PRIORITY_PROTOCOLS="shadowsocks hysteria2 vless trojan vmess"  # Порядок 
 
 | # | Репозиторий | Протоколы |
 |:---:|:---|:---:|
-| 1 | `sakha1370/OpenRay` | Mix |
-| 2 | `ebrasha/free-v2ray-public-list` | Mix |
-| 3 | `V2RayRoot/V2RayConfig` | VLESS |
-| 4 | `acymz/AutoVPN` | Mix |
-| 5 | `roosterkid/openproxylist` | Mix |
-| 6 | `amirkma/proxykma` | Mix |
-| 7 | `mahdibland/V2RayAggregator` | Mix |
-| 8 | `gongchandang49/TelegramV2rayCollector` | Mix |
-| 9 | `SoliSpirit/v2ray-configs` | SS |
-| 10 | `LonUp/NodeList` | Mix |
+| 1 | [`sakha1370/OpenRay`](https://raw.githubusercontent.com/sakha1370/OpenRay/refs/heads/main/output/all_valid_proxies.txt) | Mix |
+| 2 | [`ebrasha/free-v2ray-public-list`](https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/all_extracted_configs.txt) | Mix |
+| 3 | [`V2RayRoot/V2RayConfig`](https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt) | VLESS |
+| 4 | [`acymz/AutoVPN`](https://raw.githubusercontent.com/acymz/AutoVPN/refs/heads/main/data/V2.txt) | Mix |
+| 5 | [`roosterkid/openproxylist`](https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/V2RAY.txt) | Mix |
+| 6 | [`amirkma/proxykma`](https://raw.githubusercontent.com/amirkma/proxykma/refs/heads/main/mix.txt) | Mix |
+| 7 | [`mahdibland/V2RayAggregator`](https://raw.githubusercontent.com/mahdibland/V2RayAggregator/refs/heads/master/sub/sub_merge.txt) | Mix |
+| 8 | [`gongchandang49/TelegramV2rayCollector`](https://raw.githubusercontent.com/gongchandang49/TelegramV2rayCollector/refs/heads/main/sub/mix) | Mix |
+| 9 | [`SoliSpirit/v2ray-configs`](https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/refs/heads/main/Protocols/ss.txt) | SS |
+| 10 | [`LonUp/NodeList`](https://raw.githubusercontent.com/LonUp/NodeList/main/node.txt) | Mix |
 
 ## ➕ Как добавить свои источники (Telegram / GitHub / Платные пулы)
 
