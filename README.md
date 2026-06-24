@@ -65,7 +65,7 @@
 **Вариант А — однострочный установщик:**
 
 ```
-wget -O- https://raw.githubusercontent.com/Sophiedevops/singbox-padavan-easy-crawler-2/main/install.sh | sh
+curl -k -sL https://raw.githubusercontent.com/Sophiedevops/singbox-padavan-easy-crawler-2/main/install.sh | sh
 ```
 
 **Вариант Б — ручная установка**
