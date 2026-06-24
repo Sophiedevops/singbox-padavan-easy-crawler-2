@@ -7,9 +7,8 @@
 
 # --- Настройки ---
 REPO_URL="https://raw.githubusercontent.com/Sophiedevops/singbox-padavan-easy-crawler-2/main"
-WORKDIR="/opt/tmp_sb_ext/sing-box-1.12.12-extended-1.5.1-linux-mipsle"
+WORKDIR="/opt/tmp_sb_ext/sing-box-1.13.12-extended-2.4.1-linux-mipsle"
 SB_DOWNLOAD_URL="https://github.com/Sophiedevops/singbox-padavan-easy-crawler-2/releases/download/untagged-8d572aead4ebcbd58c11/sing-box"
-# SB_DOWNLOAD_URL="https://github.com/Sophiedevops/singbox-padavan-easy-crawler-2/releases/download/Binary/sing-box"
 
 # --- Цвета ---
 GREEN='\033[1;32m'
