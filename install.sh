@@ -116,7 +116,6 @@ download_file() {
 download_file "update.sh"
 download_file "gen_links.sh"
 download_file "converter.lua"
-download_file "utils.lua"
 download_file "conf3_final.json"
 
 chmod +x "$WORKDIR/update.sh"
